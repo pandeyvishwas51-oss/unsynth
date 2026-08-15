@@ -20,6 +20,9 @@ uv run ruff check src tests
 uv run ruff format src tests
 uv run mypy src/unsynth
 uv run pytest --cov
+# production belt: fuzz, 50KB docs, 40-file batch
+uv run pytest -m "slow or stress"
+uv run python scripts/stress_bench.py
 ```
 
 Python 3.11+ is required. 3.12/3.13 are CI-tested.

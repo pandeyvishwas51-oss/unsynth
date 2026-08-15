@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
 from unsynth.config import Settings
+from unsynth.safety import finite_unit
 from unsynth.text import Token, sliding_windows, tokenize
 from unsynth.types import (
     DetectionContext,
@@ -78,8 +79,8 @@ class BaseDetector(ABC):
         return DetectorResult(
             name=self.name,
             family=used_family,
-            score=float(max(0.0, min(1.0, score))),
-            confidence=float(max(0.0, min(1.0, confidence))),
+            score=finite_unit(score),
+            confidence=finite_unit(confidence),
             label=used_label,
             details=details or {},
             signals=tuple(signals),

@@ -10,6 +10,7 @@ from unsynth.logging import get_logger
 from unsynth.pipeline.document import apply_to_markdown
 from unsynth.rewriters.pipeline import RewriteStack
 from unsynth.rewriters.quality import QualityGate
+from unsynth.safety import sanitize_text
 from unsynth.types import (
     DetectionContext,
     DetectorFamily,
@@ -38,6 +39,7 @@ class UnSynthPipeline:
         self.quality = QualityGate(self.settings)
 
     def detect(self, text: str, *, context: DetectionContext | None = None) -> DetectorResult:
+        text = sanitize_text(text)
         scored = text
         if self.settings.rewrite.protect_markdown:
             from unsynth.pipeline.markdown import iter_rewriteable, parse_markdown
@@ -48,6 +50,7 @@ class UnSynthPipeline:
         return self.ensemble.detect(scored, context=context)
 
     def rewrite(self, text: str, *, strength: float | None = None) -> RewriteResult:
+        text = sanitize_text(text)
         level = self.settings.rewrite.initial_strength if strength is None else strength
         if self.settings.rewrite.protect_markdown:
             holder: list[RewriteResult] = []
@@ -91,6 +94,7 @@ class UnSynthPipeline:
             if progress:
                 progress(msg)
 
+        text = sanitize_text(text)
         before = self.detect(text, context=context)
         emit(f"detect: score={before.score:.3f} label={before.label} conf={before.confidence:.2f}")
 

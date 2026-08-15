@@ -139,7 +139,8 @@ class ClassicalDetector(BaseDetector):
         # Mean unigram surprisal, scaled toward a GPT-2-like PPL range.
         surprisal = [-unigram_logprob(t) for t in tokens]
         mean_nats = sum(surprisal) / len(surprisal)
-        return float(math.exp(mean_nats))
+        # Cap so a stream of OOV tokens cannot overflow to Inf.
+        return float(min(math.exp(min(mean_nats, 20.0)), 1e6))
 
     def _phrase_density(self, text: str) -> float:
         hits = len(_HEDGE_RE.findall(text)) + len(_AI_WORD_RE.findall(text))

@@ -7,6 +7,7 @@ from typing import Any
 
 from unsynth.config import Settings
 from unsynth.logging import get_logger
+from unsynth.safety import finite_unit
 from unsynth.text import (
     char_ngrams,
     cosine_counters,
@@ -73,6 +74,7 @@ class QualityGate:
 
     def evaluate(self, original: str, rewritten: str) -> QualityReport:
         sim, method = self.similarity(original, rewritten)
+        sim = finite_unit(sim)
         rb = flesch_reading_ease(original)
         ra = flesch_reading_ease(rewritten)
         o_len = max(1, len(original.strip()))

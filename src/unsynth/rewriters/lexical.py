@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 
 from unsynth.data.lexicon import AI_PHRASES, SYNONYMS, TRANSITION_SWAPS
 from unsynth.rewriters.base import BaseRewriter
 from unsynth.rewriters.entropy import select_targets
+from unsynth.safety import overlaps_protected, protected_spans
 from unsynth.text import match_casing, reconstruct, seeded_rng
 from unsynth.types import RewriteResult
 
-_WORD_BOUNDARY = re.compile(r"\b", re.UNICODE)
+
+@lru_cache(maxsize=512)
+def _phrase_re(phrase: str) -> re.Pattern[str]:
+    return re.compile(rf"(?<!\w){re.escape(phrase)}(?!\w)", re.IGNORECASE)
 
 
 class LexicalRewriter(BaseRewriter):
@@ -37,30 +42,30 @@ class LexicalRewriter(BaseRewriter):
         )
 
     def _replace_phrases(self, text: str, strength: float, rng: object) -> tuple[str, int]:
-        # Longer phrases first so we don't nibble them into words.
+        del strength
         keys = sorted(AI_PHRASES.keys(), key=len, reverse=True)
         edits = 0
         out = text
-        # Strength gates how aggressively we rewrite stock phrases.
-        # Always rewrite the most toxic ones; sample the rest.
+        blocked = protected_spans(out)
         for phrase in keys:
-            pattern = re.compile(re.escape(phrase), re.IGNORECASE)
-            matches = list(pattern.finditer(out))
+            matches = list(_phrase_re(phrase).finditer(out))
             if not matches:
                 continue
             for match in reversed(matches):
-                # Stock phrases are the highest-leverage classical-detector
-                # tell. Always rewrite them; strength only picks the variant.
+                if overlaps_protected(match.start(), match.end(), blocked):
+                    continue
                 options = AI_PHRASES[phrase]
                 repl = match_casing(match.group(0), rng.choice(options))  # type: ignore[attr-defined]
                 out = out[: match.start()] + repl + out[match.end() :]
                 edits += 1
+            blocked = protected_spans(out)
         return out, edits
 
     def _replace_words(self, text: str, strength: float, rng: object) -> tuple[str, int]:
         targets = select_targets(text, strength)
         if not targets:
             return text, 0
+        blocked = protected_spans(text)
         replacements: list[tuple[int, int, str]] = []
         used_spans: list[tuple[int, int]] = []
         for ranked in targets:
@@ -68,9 +73,10 @@ class LexicalRewriter(BaseRewriter):
             options = SYNONYMS.get(tok.lower) or TRANSITION_SWAPS.get(tok.lower)
             if not options:
                 continue
+            if overlaps_protected(tok.start, tok.end, blocked):
+                continue
             if any(not (tok.end <= s or tok.start >= e) for s, e in used_spans):
                 continue
-            # Keep some originals so the passage doesn't become a thesaurus.
             keep_p = 0.55 - 0.35 * strength
             if rng.random() < keep_p:  # type: ignore[attr-defined]
                 continue

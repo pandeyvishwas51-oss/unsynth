@@ -7,7 +7,8 @@ from collections.abc import Iterator
 
 from unsynth.types import Segment, SegmentKind
 
-FENCE_RE = re.compile(r"^```[\w+-]*\s*$", re.MULTILINE)
+# Any fenced opener: ```python, ```c++, ```python:3.11, ~~~, indented-or-not.
+FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})[^\n]*$")
 HEADING_RE = re.compile(r"^(#{1,6})\s+\S")
 TABLE_RE = re.compile(r"^\s*\|.+\|\s*$")
 HR_RE = re.compile(r"^\s*([-*_]\s*){3,}$")

@@ -14,7 +14,11 @@ from collections import Counter
 from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass
 
-WORD_RE = re.compile(r"[A-Za-z]+(?:'[A-Za-z]+)?|\d+(?:\.\d+)?|[^\sA-Za-z0-9]")
+# Unicode letters (café, naïve, Москва) plus ASCII numbers and leftover punct.
+WORD_RE = re.compile(
+    r"[^\W\d_]+(?:'[^\W\d_]+)?|\d+(?:\.\d+)?|[^\s\w]",
+    re.UNICODE,
+)
 SENTENCE_RE = re.compile(r"(?<=[.!?])\s+(?=[\"'(A-Z0-9])")
 WHITESPACE_RE = re.compile(r"\s+")
 URL_RE = re.compile(r"https?://[^\s)>\]]+", re.IGNORECASE)
@@ -258,7 +262,7 @@ def token_change_rate(original: str, rewritten: str) -> float:
 
 def stable_hash32(parts: Sequence[str | int], seed: int = 0) -> int:
     h = hashlib.blake2b(digest_size=8)
-    h.update(seed.to_bytes(8, "little", signed=False))
+    h.update(int(seed).to_bytes(8, "little", signed=True))
     for part in parts:
         h.update(b"\x1f")
         h.update(str(part).encode("utf-8"))
@@ -294,7 +298,7 @@ def reconstruct(text: str, replacements: Sequence[tuple[int, int, str]]) -> str:
     out = text
     last_start = len(text) + 1
     for start, end, new in ordered:
-        if end > last_start:
+        if start < 0 or end < start or end > last_start:
             continue
         out = out[:start] + new + out[end:]
         last_start = start

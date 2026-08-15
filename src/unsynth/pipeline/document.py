@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from unsynth.pipeline.markdown import iter_rewriteable, parse_markdown, render_segments
+from unsynth.safety import split_prose_chunks
 from unsynth.text import paragraphs
 from unsynth.types import Segment
 
@@ -72,7 +73,13 @@ def apply_to_markdown(
         ):
             updated.append(seg)
             continue
-        new_text = _preserve_whitespace(seg.text, transform(seg.text))
+        pieces: list[str] = []
+        for chunk in split_prose_chunks(seg.text):
+            if not chunk.strip():
+                pieces.append(chunk)
+                continue
+            pieces.append(_preserve_whitespace(chunk, transform(chunk)))
+        new_text = "".join(pieces)
         updated.append(Segment(seg.kind, new_text, seg.protected, seg.start, seg.end))
         del i
     return render_segments(updated)

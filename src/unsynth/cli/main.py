@@ -47,7 +47,10 @@ def _settings(config: Path | None) -> Settings:
 
 def _read_input(path: Path | None, stdin_ok: bool = True) -> str:
     if path is not None:
-        return path.read_text(encoding="utf-8", errors="replace")
+        try:
+            return path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            raise typer.BadParameter(f"cannot read {path}: {exc}") from exc
     if stdin_ok and not sys.stdin.isatty():
         return sys.stdin.read()
     raise typer.BadParameter("provide a file or pipe text on stdin")
@@ -235,10 +238,10 @@ def rewrite(
     if json_out:
         payload = {"result": result.as_dict(), "text": result.output}
         out.print_json(json.dumps(payload, indent=2))
-        return
-    if result.after:
+    elif result.after:
         _print_score_table("after one pass", result.after.as_dict())
-    _write_output(result.output, output)
+    if output is not None or not json_out:
+        _write_output(result.output, output)
 
 
 @app.command()
@@ -289,6 +292,7 @@ def clean(
             f"{(result.after.score if result.after else 0):.3f} "
             f"(Δ {delta:+.3f})  target_met={result.target_met}"
         )
+    if output is not None or not json_out:
         _write_output(result.output, output)
     if report is not None:
         report.write_text(render_markdown_report(result), encoding="utf-8")

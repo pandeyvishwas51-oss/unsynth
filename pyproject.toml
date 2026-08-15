@@ -204,7 +204,8 @@ filterwarnings = [
     "ignore::DeprecationWarning",
 ]
 markers = [
-    "slow: optional integration tests that may need local models",
+    "slow: long-running stress or optional local-model tests",
+    "stress: production stress / fuzz / scale tests",
 ]
 
 [tool.coverage.run]
