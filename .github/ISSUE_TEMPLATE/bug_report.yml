@@ -1,0 +1,38 @@
+name: Bug report
+description: Something UnSynth did wrong
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Please do not paste private documents. Reduce to a short public fixture.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Actual vs expected.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: UnSynth version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: Command + config (redact keys).
+      render: bash
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Backend
+      options:
+        - none (heuristics only)
+        - ollama
+        - openai_compatible
+        - transformers

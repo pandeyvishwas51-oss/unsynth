@@ -1,0 +1,61 @@
+# UnSynth configuration
+# Copy to unsynth.yaml or ~/.config/unsynth/config.yaml and edit.
+# Environment variables prefixed with UNSYNTH_ override these values.
+
+detect:
+  detectors:
+    - classical
+    - stylometric
+    - statistical
+    # - anthropic   # enable only when an API key + endpoint exist
+  ai_likely: 0.62
+  watermark_likely: 0.70
+  uncertain: 0.45
+  window_tokens: 256
+  window_stride: 128
+
+rewrite:
+  max_passes: 4
+  min_similarity: 0.82
+  target_ai_score: 0.40
+  target_watermark_score: 0.48
+  initial_strength: 0.42
+  strength_step: 0.16
+  max_strength: 0.92
+  strategies:
+    - lexical
+    - structural
+    - style
+    - paraphrase
+  protect_markdown: true
+  protect_code: true
+  protect_tables: true
+  protect_urls: true
+  allow_backtranslate: false
+
+backend:
+  kind: none          # none | ollama | openai_compatible | transformers
+  model: llama3.1:8b
+  host: http://127.0.0.1:11434
+  temperature: 0.85
+  max_tokens: 2048
+  timeout_s: 120.0
+
+quality:
+  embeddings: auto    # none | auto | sentence-transformers
+  embedding_model: all-MiniLM-L6-v2
+  min_readability: 20.0
+  max_length_ratio: 1.45
+  min_length_ratio: 0.62
+
+metadata:
+  strip_c2pa: true
+  strip_xmp: true
+  strip_exif: true
+  strip_html_provenance: true
+
+runtime:
+  log_level: INFO
+  seed: 13
+  workers: 1
+  plugin_dirs: []

@@ -1,0 +1,67 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Packaging
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+
+# UV / lock alternatives (keep uv.lock in repo)
+.python-version.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Local secrets / runtime
+.env
+.env.*
+!.env.example
+*.local.yaml
+*.local.toml
+unsynth.local.yaml
+
+# Outputs
+/out/
+/artifacts/
+/reports/
+*.unsynth.json
+*.unsynth.md
+
+# Models / large local caches
+.cache/
+models/
+*.gguf
+*.bin
+*.safetensors
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+Thumbs.db

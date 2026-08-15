@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: https://github.com/unsynth/unsynth/discussions
+    about: Design questions and "is this a watermark?" threads

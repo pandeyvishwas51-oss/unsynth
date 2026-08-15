@@ -1,0 +1,28 @@
+name: New detector / watermark family
+description: Propose a detector plugin (classical, statistical, or vendor API)
+title: "[detector] "
+labels: ["detector", "plugin"]
+body:
+  - type: input
+    id: family
+    attributes:
+      label: Family
+      description: classical / stylometric / watermark / api
+    validations:
+      required: true
+  - type: textarea
+    id: paper
+    attributes:
+      label: Paper or vendor docs
+      description: Link the scheme (Kirchenbauer, SynthID-Text, Unigram-Watermark, …).
+  - type: textarea
+    id: threat
+    attributes:
+      label: What the detector can and cannot see
+    validations:
+      required: true
+  - type: textarea
+    id: api
+    attributes:
+      label: Proposed `DetectorResult` signals
+      description: Named features, not a mystery score.
