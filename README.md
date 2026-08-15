@@ -2,7 +2,7 @@
 
 **Local-first toolkit for detecting AI-generated text and disrupting classical detectors *and* statistical LLM watermarks** (SynthID-Text / tournament-sampling / Kirchenbauer-style), including text that is already published.
 
-[![CI](https://img.shields.io/github/actions/workflow/status/unsynth/unsynth/ci.yml?branch=main)](https://github.com/unsynth/unsynth/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/pandeyvishwas51-oss/unsynth/ci.yml?branch=main)](https://github.com/pandeyvishwas51-oss/unsynth/actions)
 [![PyPI](https://img.shields.io/pypi/v/unsynth.svg)](https://pypi.org/project/unsynth/)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)

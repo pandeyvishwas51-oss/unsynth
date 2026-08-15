@@ -85,11 +85,11 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/unsynth/unsynth"
-Documentation = "https://github.com/unsynth/unsynth#readme"
-Repository = "https://github.com/unsynth/unsynth"
-Issues = "https://github.com/unsynth/unsynth/issues"
-Changelog = "https://github.com/unsynth/unsynth/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/pandeyvishwas51-oss/unsynth"
+Documentation = "https://github.com/pandeyvishwas51-oss/unsynth#readme"
+Repository = "https://github.com/pandeyvishwas51-oss/unsynth"
+Issues = "https://github.com/pandeyvishwas51-oss/unsynth/issues"
+Changelog = "https://github.com/pandeyvishwas51-oss/unsynth/blob/main/CHANGELOG.md"
 
 [project.scripts]
 unsynth = "unsynth.cli.main:app"
