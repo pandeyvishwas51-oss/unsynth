@@ -5,12 +5,10 @@ from __future__ import annotations
 import importlib
 import importlib.metadata
 import importlib.util
-import sys
 from collections.abc import Iterable
 from pathlib import Path
 from typing import TypeVar
 
-from unsynth.exceptions import PluginError
 from unsynth.logging import get_logger
 
 log = get_logger("plugins")
@@ -55,9 +53,8 @@ def load_directory_plugins(directories: Iterable[str | Path]) -> dict[str, type[
     for raw in directories:
         directory = Path(raw).expanduser()
         if not directory.is_dir():
-            raise PluginError(f"plugin directory does not exist: {directory}")
-        if str(directory) not in sys.path:
-            sys.path.insert(0, str(directory))
+            log.warning("skipping missing plugin directory: %s", directory)
+            continue
         for path in sorted(directory.glob("*.py")):
             if path.name.startswith("_"):
                 continue
@@ -68,8 +65,12 @@ def load_directory_plugins(directories: Iterable[str | Path]) -> dict[str, type[
             module = importlib.util.module_from_spec(spec)
             try:
                 spec.loader.exec_module(module)
+            except SystemExit as exc:
+                log.warning("skipping plugin %s that called SystemExit: %s", path, exc)
+                continue
             except Exception as exc:
-                raise PluginError(f"failed to import plugin {path}: {exc}") from exc
+                log.warning("skipping broken plugin %s: %s", path, exc)
+                continue
             classes: list[type[object]] = []
             for attr in ("DETECTORS", "REWRITERS", "PLUGINS"):
                 extra = getattr(module, attr, None)

@@ -15,11 +15,12 @@ from rich.table import Table
 from unsynth import __version__
 from unsynth.config import Settings, load_settings
 from unsynth.eval.report import render_markdown_report
-from unsynth.exceptions import UnSynthError
+from unsynth.exceptions import ConfigError, UnSynthError
 from unsynth.logging import configure_logging
 from unsynth.metadata.strip import strip_path
 from unsynth.pipeline.document import iter_files
 from unsynth.pipeline.orchestrator import UnSynthPipeline
+from unsynth.safety import atomic_write_text
 from unsynth.types import PipelineMode
 
 app = typer.Typer(
@@ -42,7 +43,11 @@ def _as_float(value: object, default: float = 0.0) -> float:
 
 
 def _settings(config: Path | None) -> Settings:
-    return load_settings(config)
+    try:
+        return load_settings(config)
+    except ConfigError as exc:
+        console.print(f"[red]config:[/red] {exc}")
+        raise typer.Exit(1) from exc
 
 
 def _read_input(path: Path | None, stdin_ok: bool = True) -> str:
@@ -63,8 +68,7 @@ def _write_output(text: str, dest: Path | None) -> None:
         if not text.endswith("\n"):
             sys.stdout.write("\n")
         return
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_text(text, encoding="utf-8")
+    atomic_write_text(dest, text)
     console.print(f"[green]wrote[/green] {dest}")
 
 
@@ -199,7 +203,11 @@ def detect(
     settings = _settings(config or (ctx.obj or {}).get("config"))
     text = _read_input(path)
     pipeline = UnSynthPipeline(settings)
-    result = pipeline.run(text, mode=PipelineMode.DETECT)
+    try:
+        result = pipeline.run(text, mode=PipelineMode.DETECT)
+    except UnSynthError as exc:
+        console.print(f"[red]detect failed:[/red] {exc}")
+        raise typer.Exit(1) from exc
     if json_out:
         out.print_json(json.dumps(result.before.as_dict(), indent=2))
         return
@@ -376,18 +384,26 @@ def batch(
     if not files:
         console.print("[yellow]no files found[/yellow]")
         raise typer.Exit(1)
+    failures = 0
     for file in files:
         console.print(f"[bold]{file}[/bold]")
-        text = file.read_text(encoding="utf-8", errors="replace")
-        result = pipeline.run(text, mode=mode)
-        rel = file.name if source.is_file() else str(file.relative_to(source))
-        target = dest / (rel + suffix if source.is_file() else Path(rel).with_suffix(suffix))
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(result.output, encoding="utf-8")
-        after = result.after.score if result.after else result.before.score
-        console.print(
-            f"  {result.before.score:.3f} → {after:.3f}  target_met={result.target_met}  → {target}"
-        )
+        try:
+            text = file.read_text(encoding="utf-8", errors="replace")
+            result = pipeline.run(text, mode=mode)
+            rel = file.name if source.is_file() else str(file.relative_to(source))
+            target = dest / (rel + suffix if source.is_file() else Path(rel).with_suffix(suffix))
+            atomic_write_text(target, result.output)
+            after = result.after.score if result.after else result.before.score
+            console.print(
+                f"  {result.before.score:.3f} → {after:.3f}  "
+                f"target_met={result.target_met}  → {target}"
+            )
+        except Exception as exc:
+            failures += 1
+            console.print(f"[red]failed[/red] {file}: {exc}")
+    if failures:
+        console.print(f"[red]{failures} file(s) failed[/red]")
+        raise typer.Exit(1)
 
 
 @app.command()

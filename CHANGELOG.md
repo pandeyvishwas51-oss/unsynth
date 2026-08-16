@@ -2,6 +2,22 @@
 
 All notable changes to UnSynth are documented here.
 
+## 0.1.2 — 2026-08-15
+
+### Added
+
+- Failure isolation: a crashing detector, rewriter, plugin, or batch file
+  cannot take down the rest of the run.
+- Atomic file writes (temp + replace) for CLI output and metadata strip.
+- Config validation for `max_passes`, strengths, window sizes, workers;
+  broken YAML/TOML becomes a `ConfigError`, not a traceback.
+
+### Fixed
+
+- Missing plugin directories and `sys.exit()` inside a plugin no longer
+  abort process startup.
+- Metadata strip now refuses a directory destination and creates parents.
+
 ## 0.1.1 — 2026-08-15
 
 ### Added

@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import re
 from collections.abc import Iterable
+from pathlib import Path
 
 from unsynth.exceptions import UnSynthError
 from unsynth.text import EMAIL_RE, URL_RE
@@ -101,3 +102,23 @@ def split_prose_chunks(block: str, limit: int = PROSE_CHUNK_CHARS) -> list[str]:
     if buf:
         chunks.append(buf)
     return chunks or [block]
+
+
+def atomic_write_bytes(path: Path, data: bytes) -> None:
+    """Write bytes via a sibling temp file, then replace.
+
+    A crash mid-write cannot leave the destination truncated.
+    """
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.unsynth.tmp")
+    try:
+        tmp.write_bytes(data)
+        tmp.replace(path)
+    except Exception:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
+def atomic_write_text(path: Path, text: str, *, encoding: str = "utf-8") -> None:
+    atomic_write_bytes(path, text.encode(encoding, errors="replace"))

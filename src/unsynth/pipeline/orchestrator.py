@@ -129,7 +129,12 @@ class UnSynthPipeline:
         target_met = False
         for pass_i in range(1, max_passes + 1):
             emit(f"pass {pass_i}/{max_passes} strength={strength:.2f}")
-            result = self.rewrite(current, strength=strength)
+            try:
+                result = self.rewrite(current, strength=strength)
+            except Exception as exc:
+                warnings.append(f"pass {pass_i} crashed: {exc}")
+                log.warning("rewrite pass %s crashed: %s", pass_i, exc)
+                break
             rewrites.append(result)
             if result.rewritten == current and result.edits == 0:
                 warnings.append(f"pass {pass_i} made no edits")

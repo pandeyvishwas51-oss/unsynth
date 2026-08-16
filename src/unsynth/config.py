@@ -38,6 +38,13 @@ class DetectSettings(BaseModel):
             raise ValueError("thresholds must be in [0, 1]")
         return value
 
+    @field_validator("window_tokens", "window_stride")
+    @classmethod
+    def _positive_window(cls, value: int) -> int:
+        if value < 1:
+            raise ValueError("window sizes must be >= 1")
+        return value
+
 
 class RewriteSettings(BaseModel):
     max_passes: int = 4
@@ -55,6 +62,27 @@ class RewriteSettings(BaseModel):
     protect_tables: bool = True
     protect_urls: bool = True
     allow_backtranslate: bool = False
+
+    @field_validator("max_passes")
+    @classmethod
+    def _passes(cls, value: int) -> int:
+        if value < 1:
+            raise ValueError("max_passes must be >= 1")
+        return value
+
+    @field_validator(
+        "min_similarity",
+        "target_ai_score",
+        "target_watermark_score",
+        "initial_strength",
+        "strength_step",
+        "max_strength",
+    )
+    @classmethod
+    def _unit(cls, value: float) -> float:
+        if not 0.0 <= value <= 1.0:
+            raise ValueError("must be in [0, 1]")
+        return value
 
 
 class BackendSettings(BaseModel):
@@ -87,6 +115,13 @@ class RuntimeSettings(BaseModel):
     seed: int = 13
     workers: int = 1
     plugin_dirs: list[str] = Field(default_factory=list)
+
+    @field_validator("workers")
+    @classmethod
+    def _workers(cls, value: int) -> int:
+        if value < 1:
+            raise ValueError("workers must be >= 1")
+        return value
 
 
 class Settings(BaseSettings):
@@ -157,13 +192,22 @@ def discover_config_path(explicit: str | Path | None = None) -> Path | None:
 
 
 def _read_file(path: Path) -> dict[str, Any]:
-    text = path.read_text(encoding="utf-8")
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ConfigError(f"cannot read config {path}: {exc}") from exc
     if path.suffix.lower() == ".toml":
         import tomllib
 
-        data = tomllib.loads(text)
+        try:
+            data = tomllib.loads(text)
+        except tomllib.TOMLDecodeError as exc:
+            raise ConfigError(f"invalid TOML {path}: {exc}") from exc
     else:
-        loaded = yaml.safe_load(text)
+        try:
+            loaded = yaml.safe_load(text)
+        except yaml.YAMLError as exc:
+            raise ConfigError(f"invalid YAML {path}: {exc}") from exc
         data = loaded if isinstance(loaded, dict) else {}
     if not isinstance(data, dict):
         raise ConfigError(f"config root must be a mapping: {path}")

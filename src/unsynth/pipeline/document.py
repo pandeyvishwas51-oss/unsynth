@@ -78,7 +78,12 @@ def apply_to_markdown(
             if not chunk.strip():
                 pieces.append(chunk)
                 continue
-            pieces.append(_preserve_whitespace(chunk, transform(chunk)))
+            try:
+                transformed = transform(chunk)
+            except Exception:
+                pieces.append(chunk)
+                continue
+            pieces.append(_preserve_whitespace(chunk, transformed))
         new_text = "".join(pieces)
         updated.append(Segment(seg.kind, new_text, seg.protected, seg.start, seg.end))
         del i

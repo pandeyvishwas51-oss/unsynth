@@ -27,6 +27,7 @@ from typing import Any
 
 from unsynth.exceptions import MetadataError
 from unsynth.logging import get_logger
+from unsynth.safety import atomic_write_bytes, atomic_write_text
 
 log = get_logger("metadata")
 
@@ -72,6 +73,7 @@ PDF_SUFFIXES = {".pdf"}
 HTML_SUFFIXES = {".html", ".htm", ".xhtml"}
 XML_SUFFIXES = {".xml", ".xmp", ".svg"}
 TEXT_SUFFIXES = {".md", ".markdown", ".txt", ".rst"}
+MAX_METADATA_BYTES = 50_000_000
 
 
 @dataclass
@@ -111,20 +113,25 @@ def strip_path(
 
 
 def strip_file(source: Path, dest: Path) -> StripReport:
+    if dest.exists() and dest.is_dir():
+        raise MetadataError(f"destination is a directory: {dest}")
     suffix = source.suffix.lower()
     report = StripReport(path=str(source), output=str(dest))
+    size = source.stat().st_size
+    if size > MAX_METADATA_BYTES:
+        raise MetadataError(f"{source} is {size} bytes; metadata strip cap is {MAX_METADATA_BYTES}")
     data = source.read_bytes()
 
     if suffix in HTML_SUFFIXES:
         text = data.decode("utf-8", errors="replace")
         cleaned, hits = strip_html(text)
-        dest.write_text(cleaned, encoding="utf-8")
+        atomic_write_text(dest, cleaned)
         report.removed.extend(hits)
         return report
 
     if suffix in XML_SUFFIXES or suffix in TEXT_SUFFIXES:
         cleaned_bytes, hits = _strip_xmp_bytes(data)
-        dest.write_bytes(cleaned_bytes)
+        atomic_write_bytes(dest, cleaned_bytes)
         report.removed.extend(hits)
         return report
 
@@ -136,10 +143,7 @@ def strip_file(source: Path, dest: Path) -> StripReport:
 
     # Generic binary: drop obvious XMP packets and warn.
     cleaned_bytes, hits = _strip_xmp_bytes(data)
-    if dest != source:
-        dest.write_bytes(cleaned_bytes)
-    else:
-        dest.write_bytes(cleaned_bytes)
+    atomic_write_bytes(dest, cleaned_bytes)
     report.removed.extend(hits)
     report.warnings.append(f"generic strip for suffix {suffix or '[none]'}")
     return report
@@ -221,17 +225,17 @@ def _strip_image(source: Path, dest: Path, data: bytes, report: StripReport) -> 
         if fmt in {"JPEG", "JPG"} and image.mode not in {"RGB", "L"}:
             rgb = image.convert("RGB")
         rgb.save(payload, format=fmt, **save_kwargs)
-        dest.write_bytes(payload.getvalue())
+        atomic_write_bytes(dest, payload.getvalue())
         report.removed.append("image-reencoded")
         return report
     except ImportError:
         report.skipped.append("pillow-unavailable")
-        dest.write_bytes(cleaned)
+        atomic_write_bytes(dest, cleaned)
         report.warnings.append("installed unsynth[metadata] for deeper image wipes")
         return report
     except Exception as exc:
         report.warnings.append(f"image rewrite failed: {exc}")
-        dest.write_bytes(cleaned)
+        atomic_write_bytes(dest, cleaned)
         return report
 
 
@@ -239,6 +243,7 @@ def _strip_pdf(source: Path, dest: Path, report: StripReport) -> StripReport:
     try:
         from pypdf import PdfReader, PdfWriter
     except ImportError:
+        dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, dest)
         report.skipped.append("pypdf-unavailable")
         report.warnings.append("install unsynth[metadata] to strip PDF /Metadata")
@@ -257,13 +262,14 @@ def _strip_pdf(source: Path, dest: Path, report: StripReport) -> StripReport:
                 writer.metadata = {}
             except Exception:
                 pass
+        dest.parent.mkdir(parents=True, exist_ok=True)
         with dest.open("wb") as fh:
             writer.write(fh)
         # Second pass: drop leftover xpacket bytes.
         data = dest.read_bytes()
         cleaned, hits = _strip_xmp_bytes(data)
         if hits:
-            dest.write_bytes(cleaned)
+            atomic_write_bytes(dest, cleaned)
             report.removed.extend(hits)
         report.removed.append("pdf-rewritten")
         return report

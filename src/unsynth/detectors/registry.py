@@ -11,7 +11,10 @@ from unsynth.detectors.classical import ClassicalDetector
 from unsynth.detectors.statistical import StatisticalWatermarkDetector
 from unsynth.detectors.stylometric import StylometricDetector
 from unsynth.exceptions import PluginError
+from unsynth.logging import get_logger
 from unsynth.plugins import DETECTOR_GROUP, load_directory_plugins, load_entry_points
+
+log = get_logger("detectors.registry")
 
 
 class DetectorRegistry:
@@ -46,4 +49,10 @@ class DetectorRegistry:
 
     def create_many(self, names: Iterable[str] | None = None) -> list[BaseDetector]:
         wanted = list(names) if names is not None else list(self.settings.detect.detectors)
-        return [self.create(n) for n in wanted]
+        out: list[BaseDetector] = []
+        for name in wanted:
+            try:
+                out.append(self.create(name))
+            except PluginError:
+                log.warning("skipping unknown detector %s", name)
+        return out

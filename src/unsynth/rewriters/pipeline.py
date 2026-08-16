@@ -5,10 +5,13 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from unsynth.config import Settings
+from unsynth.logging import get_logger
 from unsynth.rewriters.base import BaseRewriter
 from unsynth.rewriters.quality import QualityGate
 from unsynth.rewriters.registry import RewriterRegistry
 from unsynth.types import RewriteResult
+
+log = get_logger("rewrite-stack")
 
 
 class RewriteStack:
@@ -47,7 +50,12 @@ class RewriteStack:
                 if not is_available(self.settings):
                     notes.append(f"{strategy.name}:skipped-no-backend")
                     continue
-            result = strategy.rewrite(current, strength=strength)
+            try:
+                result = strategy.rewrite(current, strength=strength)
+            except Exception as exc:
+                log.warning("strategy %s crashed: %s", strategy.name, exc)
+                notes.append(f"{strategy.name}:error({exc})")
+                continue
             if result.rewritten == current:
                 notes.append(f"{strategy.name}:noop")
                 continue

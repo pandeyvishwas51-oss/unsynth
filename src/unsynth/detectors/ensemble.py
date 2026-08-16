@@ -7,12 +7,15 @@ from collections.abc import Sequence
 from unsynth.config import Settings
 from unsynth.detectors.base import BaseDetector
 from unsynth.detectors.registry import DetectorRegistry
+from unsynth.logging import get_logger
 from unsynth.types import (
     DetectionContext,
     DetectorFamily,
     DetectorResult,
     Signal,
 )
+
+log = get_logger("ensemble")
 
 FAMILY_WEIGHTS: dict[DetectorFamily, float] = {
     DetectorFamily.CLASSICAL: 0.34,
@@ -42,7 +45,13 @@ class EnsembleDetector(BaseDetector):
             self.detectors = registry.create_many(names)
 
     def detect(self, text: str, *, context: DetectionContext | None = None) -> DetectorResult:
-        children = [d.detect(text, context=context) for d in self.detectors]
+        children: list[DetectorResult] = []
+        for det in self.detectors:
+            try:
+                children.append(det.detect(text, context=context))
+            except Exception as exc:
+                log.warning("detector %s crashed: %s", det.name, exc)
+                children.append(BaseDetector.empty_result(det.name, det.family, f"crashed: {exc}"))
         if not children:
             return self.empty_result(self.name, self.family, "no detectors configured")
 

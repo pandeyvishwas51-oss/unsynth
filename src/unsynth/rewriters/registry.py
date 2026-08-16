@@ -6,6 +6,7 @@ from collections.abc import Iterable
 
 from unsynth.config import Settings
 from unsynth.exceptions import PluginError
+from unsynth.logging import get_logger
 from unsynth.plugins import REWRITER_GROUP, load_directory_plugins, load_entry_points
 from unsynth.rewriters.backtranslate import BacktranslateRewriter
 from unsynth.rewriters.base import BaseRewriter
@@ -13,6 +14,8 @@ from unsynth.rewriters.lexical import LexicalRewriter
 from unsynth.rewriters.paraphrase import ParaphraseRewriter
 from unsynth.rewriters.structural import StructuralRewriter
 from unsynth.rewriters.style import StyleHumanizer
+
+log = get_logger("rewriters.registry")
 
 
 class RewriterRegistry:
@@ -45,4 +48,10 @@ class RewriterRegistry:
 
     def create_many(self, names: Iterable[str] | None = None) -> list[BaseRewriter]:
         wanted = list(names) if names is not None else list(self.settings.rewrite.strategies)
-        return [self.create(n) for n in wanted]
+        out: list[BaseRewriter] = []
+        for name in wanted:
+            try:
+                out.append(self.create(name))
+            except PluginError:
+                log.warning("skipping unknown rewriter %s", name)
+        return out

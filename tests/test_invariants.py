@@ -27,6 +27,11 @@ def _pipe(settings: Settings) -> UnSynthPipeline:
     return UnSynthPipeline(settings)
 
 
+def test_markdown_preserves_crlf() -> None:
+    src = "# Title\r\n\r\nHello world.\r\n\r\n```\r\nX=1\r\n```\r\n"
+    assert render_segments(parse_markdown(src)) == src
+
+
 def test_markdown_parse_is_lossless() -> None:
     segs = parse_markdown(MARKDOWN_DOC)
     assert render_segments(segs) == MARKDOWN_DOC
